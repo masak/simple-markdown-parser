@@ -1,0 +1,39 @@
+#! /usr/bin/env perl6
+use v6;
+
+use Markdown;
+
+for <p5-output p6-output> -> $dir {
+    shell "rm -rf $dir";
+    try mkdir "$dir";
+    die $! if $! and $! !~~ /'File exists'/;
+}
+
+my $temp_filename = "/tmp/justmarkdown";
+
+#for dir('posts', :test( / '.markdown' $ / ))>>.basename -> $markdown_filename {
+for 'announcing-november-a-wiki-in-perl-6.markdown' -> $markdown_filename {
+    my $html_filename = $markdown_filename.subst(/'.' <-[.]>+ $/, '.html');
+    my $contents = slurp("posts/$markdown_filename")\
+        .subst(/'---' [<!before '---'> .]+ '---'\n/, "");
+    spurt $temp_filename, $contents;
+
+    my $p5_html
+        = qqx[Markdown_1.0.1/Markdown.pl --html4tags $temp_filename];
+    unlink $temp_filename;
+    $p5_html ~~ s:g[^^ \h* \n] = "";
+    spurt "p5-output/$html_filename", $p5_html;
+
+    my $p6_html = Markdown::to_html($contents);
+    spurt "p6-output/$html_filename", $p6_html;
+
+    my $diff
+        = qqx[diff -U2 p5-output/$html_filename p6-output/$html_filename];
+
+    my $dots = "." x (79 - $markdown_filename.chars);
+    my $verdict = $diff ?? "DIFF" !! "same";
+    say "$markdown_filename $dots [$verdict]";
+    for $diff.lines -> $line {
+        say "\t$line";
+    }
+}
