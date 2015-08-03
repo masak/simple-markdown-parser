@@ -1,10 +1,14 @@
 unit module Markdown;
 
 sub transform_inlines {
-    $^s.subst(:g, /'*' (<-[*]>+) '*'/, -> $/ { "<em>{$0}</em>" })\
+    $^st.subst(:g, /'*' (<-[*]>+) '*'/, -> $/ { "<em>{$0}</em>" })\
         .subst(:g, /'`' (<-[`]>+) '`'/, -> $/ { "<code>{$0}</code>" })\
         .subst(:g, /'[' (<-[\]]>+) '](' (<-[)]>+) ')'/,
                 -> $/ { qq[<a href="{$1}">{$0}</a>] });
+}
+
+sub escape_html {
+    $^st.trans(['<', '>', '&'] => ['&lt;', '&gt;', '&amp;']);
 }
 
 class Paragraph {
@@ -39,6 +43,14 @@ class HtmlBlock {
     }
 }
 
+class IndentedCodeBlock {
+    has $.contents is rw;
+
+    method to_html {
+        "<pre><code>{escape_html $.contents}\n</code></pre>\n";
+    }
+}
+
 our sub to_html($input) {
     my @elements;
     my $new_paragraph = True;
@@ -53,6 +65,16 @@ our sub to_html($input) {
         }
         elsif $eating_html {
             @elements[*-1].contents ~= "\n$line";
+            next LINE;
+        }
+        elsif $line ~~ /^ '    ' (\N+) / {
+            my $contents = ~$0;
+            if !@elements || @elements[*-1] !~~ IndentedCodeBlock {
+                @elements.push: IndentedCodeBlock.new(:$contents);
+            }
+            else {
+                @elements[*-1].contents ~= "\n$0";
+            }
             next LINE;
         }
         elsif $line ~~ /^ '- ' \h* (.*) / {
