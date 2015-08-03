@@ -12,7 +12,9 @@ for <p5-output p6-output> -> $dir {
 my $temp_filename = "/tmp/justmarkdown";
 
 #for dir('posts', :test( / '.markdown' $ / ))>>.basename -> $markdown_filename {
-for 'announcing-november-a-wiki-in-perl-6.markdown' -> $markdown_filename {
+for 'announcing-november-a-wiki-in-perl-6.markdown',
+    'november-meets-the-web.markdown' -> $markdown_filename {
+
     my $html_filename = $markdown_filename.subst(/'.' <-[.]>+ $/, '.html');
     my $contents = slurp("posts/$markdown_filename")\
         .subst(/'---' [<!before '---'> .]+ '---'\n/, "");

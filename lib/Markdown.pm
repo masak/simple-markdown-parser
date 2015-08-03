@@ -1,10 +1,17 @@
 unit module Markdown;
 
+sub transform_inlines {
+    $^s.subst(:g, /'*' (<-[*]>+) '*'/, -> $/ { "<em>{$0}</em>" })\
+        .subst(:g, /'`' (<-[`]>+) '`'/, -> $/ { "<code>{$0}</code>" })\
+        .subst(:g, /'[' (<-[\]]>+) '](' (<-[)]>+) ')'/,
+                -> $/ { qq[<a href="{$1}">{$0}</a>] });
+}
+
 class Paragraph {
     has $.contents is rw;
 
     method to_html {
-        "<p>{$.contents}</p>\n";
+        "<p>{transform_inlines $.contents}</p>\n";
     }
 }
 
