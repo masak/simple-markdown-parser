@@ -9,11 +9,17 @@ for <p5-output p6-output> -> $dir {
     die $! if $! and $! !~~ /'File exists'/;
 }
 
+my %creation_date_to_filename;
+for dir('posts', :test( / '.markdown' $ / )) -> $file {
+    my $filename = $file.basename;
+    my $created = $file.lines.first(/^ 'created: ' (\N+) $/);
+    %creation_date_to_filename{$created} = $filename;
+}
+
 my $temp_filename = "/tmp/justmarkdown";
 
-#for dir('posts', :test( / '.markdown' $ / ))>>.basename -> $markdown_filename {
-for 'announcing-november-a-wiki-in-perl-6.markdown',
-    'november-meets-the-web.markdown' -> $markdown_filename {
+my $success_count = 0;
+for %creation_date_to_filename.pairs.sort».value -> $markdown_filename {
 
     my $html_filename = $markdown_filename.subst(/'.' <-[.]>+ $/, '.html');
     my $contents = slurp("posts/$markdown_filename")\
@@ -42,4 +48,9 @@ for 'announcing-november-a-wiki-in-perl-6.markdown',
     for $diff.lines -> $line {
         say "\t$line";
     }
+    last if $diff;
+    $success_count++;
 }
+
+say "";
+say "Successfully translated $success_count Markdown files.";
