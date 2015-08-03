@@ -27,8 +27,12 @@ for 'announcing-november-a-wiki-in-perl-6.markdown' -> $markdown_filename {
     my $p6_html = Markdown::to_html($contents);
     spurt "p6-output/$html_filename", $p6_html;
 
-    my $diff
-        = qqx[diff -U2 p5-output/$html_filename p6-output/$html_filename];
+    my $diffproc = run(
+        'colordiff', '-U2',
+        "p5-output/$html_filename",
+        "p6-output/$html_filename",
+        :out);
+    my $diff = $diffproc.out.lines.join("\n");
 
     my $dots = "." x (79 - $markdown_filename.chars);
     my $verdict = $diff ?? "DIFF" !! "same";
