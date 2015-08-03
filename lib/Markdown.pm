@@ -55,6 +55,14 @@ class IndentedCodeBlock {
     }
 }
 
+class AtxHeader {
+    has $.contents;
+
+    method to_html {
+        "<h2>{$.contents}</h2>\n";
+    }
+}
+
 our sub to_html($input) {
     my @elements;
     my $new_paragraph = True;
@@ -87,6 +95,11 @@ our sub to_html($input) {
             }
             my $contents = ~$0;
             @elements[*-1].push: ListItem.new(:$contents);
+            next LINE;
+        }
+        elsif $line ~~ /^ '##' \h* (.*) / {
+            my $contents = ~$0;
+            @elements.push: AtxHeader.new(:$contents);
             next LINE;
         }
         elsif $line ~~ /^ '<dl>' $/ {   # XXX: generalize
