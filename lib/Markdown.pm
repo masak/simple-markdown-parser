@@ -1,7 +1,8 @@
 unit module Markdown;
 
 sub transform_inlines($text) {
-    my regex symbol { < * ** _ ` [ ] ( ) > }
+    my regex entity { '&#x' <[0..9a..f]>+ ';' }
+    my regex symbol { < * ** _ ` [ ] ( ) > | <entity> }
 
     my @components = $text.comb(/ <symbol> | [<!before <symbol>> .]+ /);
 
@@ -16,6 +17,7 @@ sub transform_inlines($text) {
             next;
         }
         next if @components[$i] eq '</strong>' | '</em>' | '</code>' | '</a>';  # XXX: feels dodgy
+        next if @components[$i] ~~ /<entity>/;
 
         if @components[$i] eq '**' {
             loop (my $j = $i + 1; $j < @components; $j++) {
