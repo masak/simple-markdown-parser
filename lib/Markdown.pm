@@ -187,7 +187,7 @@ our sub to_html($input) {
             @elements.push: AtxHeader.new(:$contents);
             next LINE;
         }
-        elsif $line ~~ /^ '<dl>' | '<pre>' | '<blockquote>'/ {   # XXX: generalize
+        elsif $line ~~ /^ '<dl>' | '<pre>' | '<blockquote>' | '<p ' / {   # XXX: generalize
             my $contents = $line;
             @elements.push: HtmlBlock.new(:$contents);
             $eating_html = True;
