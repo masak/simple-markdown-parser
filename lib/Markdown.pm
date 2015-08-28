@@ -57,19 +57,29 @@ sub transform_inlines($text) {
             }
         }
         if @components[$i] eq '[' {
-            CLOSER:
+            my $counter = 1;
+            INSIDE_CHUNK:
             loop (my $j = $i + 1; $j < @components; $j++) {
                 if @components[$j] eq '[' {
-                    last CLOSER;
+                    $counter++;
                 }
-                if @components[$j] eq ']' && @components[$j + 1] eq '(' {
-                    loop (my $k = $j + 2; $k < @components; $k++) {
-                        if @components[$k] eq ')' {
-                            my $href = @components[$j + 2 .. $k - 1].join;
-                            @components[$i] = qq[<a href="{$href}">];
-                            @components.splice($j, $k - $j + 1, qq[</a>]);
-                            next SYMBOL;
+                elsif @components[$j] eq ']' {
+                    $counter--;
+                }
+
+                if @components[$j] eq ']' && !$counter {
+                    if $j + 1 < @components && @components[$j + 1] eq '(' {
+                        loop (my $k = $j + 2; $k < @components; $k++) {
+                            if @components[$k] eq ')' {
+                                my $href = @components[$j + 2 .. $k - 1].join;
+                                @components[$i] = qq[<a href="{$href}">];
+                                @components.splice($j, $k - $j + 1, qq[</a>]);
+                                next SYMBOL;
+                            }
                         }
+                    }
+                    else {
+                        next SYMBOL;
                     }
                 }
             }
