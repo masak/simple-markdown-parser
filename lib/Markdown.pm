@@ -1,17 +1,84 @@
 unit module Markdown;
 
-sub transform_inlines {
-    $^st.subst(:g, /'**' ([<!before '**'> .]+) '**'/,
-                -> $/ { "<strong>{$0}</strong>" })\
-        .subst(:g, /'*' (<-[*]>+) '*'/,
-                -> $/ { "<em>{$0}</em>" })\
-        .subst(:g, /'`' (<-[`]>+) '`'/,
-                -> $/ { "<code>{$0}</code>" })\
-        .subst(:g, /'[' (<-[\[\]]>+) '](' (<-[)]>+) ')'/,
-                -> $/ { qq[<a href="{$1}">{$0}</a>] });
+sub transform_inlines($text) {
+    my regex symbol { < * ** _ ` [ ] ( ) > }
+
+    my @components = $text.comb(/ <symbol> | [<!before <symbol>> .]+ /);
+
+    my $inside-code = False;
+    SYMBOL:
+    loop (my $i = 0; $i < @components; $i++) {
+        if @components[$i] eq '</code>' {
+            $inside-code = False;
+        }
+        if $inside-code {
+            @components[$i] .= &escape;
+            next;
+        }
+        next if @components[$i] eq '</strong>' | '</em>' | '</code>' | '</a>';  # XXX: feels dodgy
+
+        if @components[$i] eq '**' {
+            loop (my $j = $i + 1; $j < @components; $j++) {
+                if @components[$j] eq '**' {
+                    @components[$i] = '<strong>';
+                    @components[$j] = '</strong>';
+                    next SYMBOL;
+                }
+            }
+        }
+        if @components[$i] eq '*' {
+            loop (my $j = $i + 1; $j < @components; $j++) {
+                if @components[$j] eq '*' {
+                    @components[$i] = '<em>';
+                    @components[$j] = '</em>';
+                    next SYMBOL;
+                }
+            }
+        }
+        if @components[$i] eq '_' {
+            loop (my $j = $i + 1; $j < @components; $j++) {
+                if @components[$j] eq '_' {
+                    @components[$i] = '<em>';
+                    @components[$j] = '</em>';
+                    next SYMBOL;
+                }
+            }
+        }
+        if @components[$i] eq '`' {
+            loop (my $j = $i + 1; $j < @components; $j++) {
+                if @components[$j] eq '`' {
+                    @components[$i] = '<code>';
+                    @components[$j] = '</code>';
+                    $inside-code = True;
+                    next SYMBOL;
+                }
+            }
+        }
+        if @components[$i] eq '[' {
+            CLOSER:
+            loop (my $j = $i + 1; $j < @components; $j++) {
+                if @components[$j] eq '[' {
+                    last CLOSER;
+                }
+                if @components[$j] eq ']' && @components[$j + 1] eq '(' {
+                    loop (my $k = $j + 2; $k < @components; $k++) {
+                        if @components[$k] eq ')' {
+                            my $href = @components[$j + 2 .. $k - 1].join;
+                            @components[$i] = qq[<a href="{$href}">];
+                            @components.splice($j, $k - $j + 1, qq[</a>]);
+                            next SYMBOL;
+                        }
+                    }
+                }
+            }
+        }
+        @components[$i] .= &escape;
+    }
+
+    return @components.join;
 }
 
-sub escape_html {
+sub escape {
     $^st.trans(['<', '>', '&'] => ['&lt;', '&gt;', '&amp;']);
 }
 
@@ -51,7 +118,7 @@ class IndentedCodeBlock {
     has $.contents is rw;
 
     method to_html {
-        "<pre><code>{escape_html $.contents}\n</code></pre>\n";
+        "<pre><code>{escape $.contents}\n</code></pre>\n";
     }
 }
 
