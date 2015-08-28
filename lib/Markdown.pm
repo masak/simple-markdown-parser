@@ -90,7 +90,7 @@ class Paragraph {
     }
 }
 
-class MList {
+class UnorderedList {
     has @.contents handles <push AT_POS>;
 
     method to_html {
@@ -98,11 +98,19 @@ class MList {
     }
 }
 
+class OrderedList {
+    has @.contents handles <push AT_POS>;
+
+    method to_html {
+        "<ol>\n{@.contents».to_html.join}</ol>\n";
+    }
+}
+
 class ListItem {
     has $.contents;
 
     method to_html {
-        "<li>{$.contents}</li>\n";
+        "<li>{transform_inlines $.contents}</li>\n";
     }
 }
 
@@ -157,8 +165,16 @@ our sub to_html($input) {
             next LINE;
         }
         elsif $line ~~ /^ '- ' \h* (.*) / {
-            if !@elements || @elements[*-1] !~~ MList {
-                @elements.push: MList.new;
+            if !@elements || @elements[*-1] !~~ UnorderedList {
+                @elements.push: UnorderedList.new;
+            }
+            my $contents = ~$0;
+            @elements[*-1].push: ListItem.new(:$contents);
+            next LINE;
+        }
+        elsif $line ~~ /^ \d+ '. ' \h* (.*) / {
+            if !@elements || @elements[*-1] !~~ OrderedList {
+                @elements.push: OrderedList.new;
             }
             my $contents = ~$0;
             @elements[*-1].push: ListItem.new(:$contents);
